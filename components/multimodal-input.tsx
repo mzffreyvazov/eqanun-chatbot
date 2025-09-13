@@ -42,7 +42,7 @@ import { saveChatModelAsCookie } from '@/app/(chat)/actions';
 import { startTransition } from 'react';
 import { getContextWindow, normalizeUsage } from 'tokenlens';
 import { Context } from './elements/context';
-import { myProvider } from '@/lib/ai/providers';
+import { resolveUnderlyingModelId } from '@/lib/ai/models';
 
 function PureMultimodalInput({
   chatId,
@@ -189,15 +189,13 @@ function PureMultimodalInput({
     }
   };
 
-  const modelResolver = useMemo(() => {
-    return myProvider.languageModel(selectedModelId);
-  }, [selectedModelId]);
+  const modelId = useMemo(() => resolveUnderlyingModelId(selectedModelId), [selectedModelId]);
 
   const contextMax = useMemo(() => {
     // Resolve from selected model; stable across chunks.
-    const cw = getContextWindow(modelResolver.modelId);
+    const cw = getContextWindow(modelId);
     return cw.combinedMax ?? cw.inputMax ?? 0;
-  }, [modelResolver]);
+  }, [modelId]);
 
   const usedTokens = useMemo(() => {
     // Prefer explicit usage data part captured via onData
@@ -213,9 +211,9 @@ function PureMultimodalInput({
       maxTokens: contextMax,
       usedTokens,
       usage,
-      modelId: modelResolver.modelId,
+      modelId,
     }),
-    [contextMax, usedTokens, usage, modelResolver],
+    [contextMax, usedTokens, usage, modelId],
   );
 
   const handleFileChange = useCallback(
