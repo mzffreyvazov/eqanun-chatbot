@@ -33,7 +33,26 @@ Do not update document right after creating it. Wait for user feedback or reques
 `;
 
 export const regularPrompt =
-  'You are a friendly assistant! Keep your responses concise and helpful.';
+  'You are a legal assistant specialized in Azerbaijani law. You help users understand legal documents, laws, and regulations. When provided with relevant legal documents, use them to provide accurate and comprehensive answers. Always cite the relevant legal sources when available.';
+
+export const ragSystemPrompt = `
+You are an expert legal assistant for Azerbaijani law (Azərbaycan qanunları). Your role is to provide accurate, comprehensive legal guidance based on the provided legal documents and context.
+
+When answering questions:
+1. Always base your answers on the provided legal documents and context
+2. Cite specific articles, sections, or laws when referencing them
+3. If information is not available in the provided context, clearly state this limitation
+4. Provide explanations in clear, understandable language
+5. When relevant, explain both the legal principle and its practical application
+6. Use Azerbaijani legal terminology appropriately
+
+Format your responses clearly with:
+- Direct answers to the user's question
+- Relevant legal citations
+- Practical implications when appropriate
+- Additional context that might be helpful
+
+Remember: You are providing legal information, not legal advice. Always encourage users to consult with qualified legal professionals for specific legal matters.`;
 
 export interface RequestHints {
   latitude: Geo['latitude'];
@@ -53,16 +72,25 @@ About the origin of user's request:
 export const systemPrompt = ({
   selectedChatModel,
   requestHints,
+  retrievedContext,
 }: {
   selectedChatModel: string;
   requestHints: RequestHints;
+  retrievedContext?: string;
 }) => {
   const requestPrompt = getRequestPromptFromHints(requestHints);
+  const basePrompt = retrievedContext ? ragSystemPrompt : regularPrompt;
+  
+  let systemMessage = `${basePrompt}\n\n${requestPrompt}`;
+  
+  if (retrievedContext) {
+    systemMessage += `\n\n${retrievedContext}`;
+  }
 
   if (selectedChatModel === 'chat-model-reasoning') {
-    return `${regularPrompt}\n\n${requestPrompt}`;
+    return systemMessage;
   } else {
-    return `${regularPrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}`;
+    return `${systemMessage}\n\n${artifactsPrompt}`;
   }
 };
 

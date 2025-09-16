@@ -30,38 +30,19 @@ import { myProvider } from '@/lib/ai/providers';
 import { entitlementsByUserType } from '@/lib/ai/entitlements';
 import { postRequestBodySchema, type PostRequestBody } from './schema';
 import { geolocation } from '@vercel/functions';
-import {
-  createResumableStreamContext,
-  type ResumableStreamContext,
-} from 'resumable-stream';
 import { after } from 'next/server';
 import { ChatSDKError } from '@/lib/errors';
 import type { ChatMessage } from '@/lib/types';
 import type { ChatModel } from '@/lib/ai/models';
 import type { VisibilityType } from '@/components/visibility-selector';
+import { retrieveDocuments, formatRetrievedContext } from '@/lib/ai/retrieval';
 
 export const maxDuration = 60;
 
-let globalStreamContext: ResumableStreamContext | null = null;
-
 export function getStreamContext() {
-  if (!globalStreamContext) {
-    try {
-      globalStreamContext = createResumableStreamContext({
-        waitUntil: after,
-      });
-    } catch (error: any) {
-      if (error.message.includes('REDIS_URL')) {
-        console.log(
-          ' > Resumable streams are disabled due to missing REDIS_URL',
-        );
-      } else {
-        console.error(error);
-      }
-    }
-  }
-
-  return globalStreamContext;
+  // Skip Redis/resumable streams functionality
+  console.log(' > Resumable streams are disabled (Redis not configured)');
+  return null;
 }
 
 export async function POST(request: Request) {
@@ -151,13 +132,39 @@ export async function POST(request: Request) {
     const streamId = generateUUID();
     await createStreamId({ streamId, chatId: id });
 
+    // Extract the user's query text for RAG retrieval
+    const userQuery = message.parts
+      .filter((part) => part.type === 'text')
+      .map((part) => part.text)
+      .join(' ');
+
+    // Retrieve relevant documents from RAG backend
+    let retrievedContext: string | undefined;
+    if (userQuery.trim()) {
+      console.log('=== RAG INTEGRATION ===');
+      console.log('User query for RAG:', userQuery);
+      try {
+        const retrievalResponse = await retrieveDocuments(userQuery);
+        retrievedContext = await formatRetrievedContext(retrievalResponse);
+        console.log('RAG context length:', retrievedContext.length);
+        console.log('Retrieved context preview:', retrievedContext.substring(0, 200) + '...');
+      } catch (error) {
+        console.warn('RAG retrieval failed, continuing without context:', error);
+      }
+      console.log('=== END RAG INTEGRATION ===');
+    }
+
     let finalUsage: LanguageModelUsage | undefined;
 
     const stream = createUIMessageStream({
       execute: ({ writer: dataStream }) => {
         const result = streamText({
           model: myProvider.languageModel(selectedChatModel),
-          system: systemPrompt({ selectedChatModel, requestHints }),
+          system: systemPrompt({ 
+            selectedChatModel, 
+            requestHints,
+            retrievedContext 
+          }),
           messages: convertToModelMessages(uiMessages),
           stopWhen: stepCountIs(5),
           experimental_activeTools:
@@ -228,15 +235,8 @@ export async function POST(request: Request) {
 
     const streamContext = getStreamContext();
 
-    if (streamContext) {
-      return new Response(
-        await streamContext.resumableStream(streamId, () =>
-          stream.pipeThrough(new JsonToSseTransformStream()),
-        ),
-      );
-    } else {
-      return new Response(stream.pipeThrough(new JsonToSseTransformStream()));
-    }
+    // Always use direct streaming (no Redis/resumable streams)
+    return new Response(stream.pipeThrough(new JsonToSseTransformStream()));
   } catch (error) {
     if (error instanceof ChatSDKError) {
       return error.toResponse();

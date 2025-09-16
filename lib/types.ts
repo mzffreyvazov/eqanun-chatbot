@@ -56,3 +56,33 @@ export interface Attachment {
   url: string;
   contentType: string;
 }
+
+// RAG Types
+export interface RetrievalRequest {
+  query: string;
+  n_results?: number;
+}
+
+export interface RetrievalChunk {
+  content: string;
+  metadata: {
+    document_filename: string;
+    chunk_id: string;
+    chapter: string;
+    source_document: string;
+    chunk_index: number;
+    hierarchical_path: string;
+    content_length: number;
+    article_header: string;
+    section: string;
+    document_title: string;
+    chunk_type: string;
+    display_source_name: string;
+  };
+  distance: number;
+}
+
+export interface RetrievalResponse {
+  query: string;
+  chunks: RetrievalChunk[];
+}
