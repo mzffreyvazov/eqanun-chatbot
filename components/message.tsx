@@ -4,7 +4,7 @@ import { memo, useState } from 'react';
 import type { Vote } from '@/lib/db/schema';
 import { DocumentToolResult } from './document';
 import { SparklesIcon } from './icons';
-import { Response } from './elements/response';
+import { Response } from './elements/response-with-madde-links';
 import { MessageContent } from './elements/message';
 import {
   Tool,
