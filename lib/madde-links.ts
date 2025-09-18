@@ -50,8 +50,6 @@ export function generateMaddeLink(
  * @returns Array of unique document filenames found in the retrieval data
  */
 export function extractSourceDocuments(retrievalData: string | any): string[] {
-  console.log('Extracting source documents, data type:', typeof retrievalData);
-  
   // If it's an object (raw retrieval response)
   if (typeof retrievalData === 'object' && retrievalData?.chunks) {
     const uniqueDocuments = new Set<string>();
@@ -60,9 +58,7 @@ export function extractSourceDocuments(retrievalData: string | any): string[] {
         uniqueDocuments.add(chunk.metadata.document_filename);
       }
     }
-    const result = Array.from(uniqueDocuments);
-    console.log('Extracted documents from raw data:', result);
-    return result;
+    return Array.from(uniqueDocuments);
   }
   
   // If it's a string (formatted context), extract from HTML comments
@@ -75,13 +71,10 @@ export function extractSourceDocuments(retrievalData: string | any): string[] {
       uniqueDocuments.add(match[1]);
     }
     
-    const result = Array.from(uniqueDocuments);
-    console.log('Extracted documents from formatted context:', result);
-    return result;
+    return Array.from(uniqueDocuments);
   }
   
   // Return empty array if not a valid format
-  console.log('No valid retrieval data format found');
   return [];
 }
 
@@ -95,7 +88,6 @@ export function createArticleToDocumentMap(retrievalData: any): Map<string, stri
   
   // If it's an object (raw retrieval response) - this is the preferred case
   if (typeof retrievalData === 'object' && retrievalData?.chunks) {
-    console.log('Processing raw retrieval response for article mapping');
     for (const chunk of retrievalData.chunks) {
       const articleHeader = chunk.metadata?.article_header;
       const documentFilename = chunk.metadata?.document_filename;
@@ -106,18 +98,14 @@ export function createArticleToDocumentMap(retrievalData: any): Map<string, stri
         if (match) {
           const articleNumber = match[1];
           articleMap.set(articleNumber, documentFilename);
-          console.log(`Mapped Maddə ${articleNumber} -> ${documentFilename}`);
         }
       }
     }
-    console.log('Final article map from raw data:', Array.from(articleMap.entries()));
     return articleMap;
   }
   
   // If it's a string (formatted context), try simpler extraction
   if (typeof retrievalData === 'string') {
-    console.log('Processing formatted context string for article mapping');
-    
     // Split by source sections and process each
     const sections = retrievalData.split(/## Mənbə \d+/);
     
@@ -137,11 +125,8 @@ export function createArticleToDocumentMap(retrievalData: any): Map<string, stri
       while ((maddeMatch = maddePattern.exec(section)) !== null) {
         const articleNumber = maddeMatch[1];
         articleMap.set(articleNumber, documentFilename);
-        console.log(`Mapped Maddə ${articleNumber} -> ${documentFilename} (from formatted context)`);
       }
     }
-    
-    console.log('Final article map from formatted context:', Array.from(articleMap.entries()));
   }
   
   return articleMap;
@@ -157,10 +142,6 @@ export function processMaddeLinks(
   text: string, 
   retrievalData?: string | any
 ): string {
-  console.log('=== MADDE LINKS PROCESSING ===');
-  console.log('Input text preview:', text.substring(0, 200) + '...');
-  console.log('Retrieval data type:', typeof retrievalData);
-  
   // Create article-to-document mapping from retrieval data
   const articleToDocumentMap = retrievalData 
     ? createArticleToDocumentMap(retrievalData)
@@ -171,41 +152,38 @@ export function processMaddeLinks(
     ? extractSourceDocuments(retrievalData)
     : []; // No default fallback
   
-  console.log('Available fallback documents:', fallbackDocuments);
+  // Pattern to match complete Maddə citations including bənd and subsections
+  // Examples: "Maddə 57", "Maddə 9", "Maddə 57, bənd 1", "Maddə 162, bənd 162-1.1", "Maddə 9, bənd \"ə\"", "Maddə 12, bənd 1, \"a\", \"b\""
+  // This pattern captures the full citation text for linking
+  const maddePattern = /Maddə\s+\d+(?:-\d+(?:\.\d+)*)?(?:,\s*bənd\s+(?:[\d\-\.]+|[""'][^""']+[""']))?(?:,\s*[""'][^""']+[""'])*(?:,\s*[""'][^""']+[""'])*/g;
   
-  // Pattern to match "Maddə" followed by digits and optional sub-articles (e.g., "7-1", "15-2")
-  const maddePattern = /Maddə\s+(\d+(?:-\d+)?)/g;
-  
-  const result = text.replace(maddePattern, (match, articleNumber) => {
-    console.log(`Processing ${match} (article ${articleNumber})`);
+  const result = text.replace(maddePattern, (fullMatch) => {
+    // Extract just the article number from the full match for mapping
+    const articleNumberMatch = fullMatch.match(/Maddə\s+(\d+(?:-\d+(?:\.\d+)*)?)/);
+    if (!articleNumberMatch) return fullMatch;
+    
+    const articleNumber = articleNumberMatch[1];
     
     // First, try to find the specific document for this article number
     const specificDocument = articleToDocumentMap.get(articleNumber);
     if (specificDocument) {
-      console.log(`Found specific mapping: ${articleNumber} -> ${specificDocument}`);
       const link = generateMaddeLink(articleNumber, specificDocument);
       if (link) {
-        console.log(`Generated link: ${link}`);
-        return `[${match}](${link})`;
+        return `[${fullMatch}](${link})`;
       }
     }
     
     // If no specific mapping found, try fallback documents
-    console.log(`No specific mapping found for ${articleNumber}, trying fallbacks...`);
     for (const sourceDoc of fallbackDocuments) {
-      console.log(`Trying fallback document: ${sourceDoc}`);
       const link = generateMaddeLink(articleNumber, sourceDoc);
       if (link) {
-        console.log(`Generated fallback link: ${link}`);
-        return `[${match}](${link})`;
+        return `[${fullMatch}](${link})`;
       }
     }
     
     // If no link found, return the original text
-    console.log(`No link generated for ${match}`);
-    return match;
+    return fullMatch;
   });
   
-  console.log('=== END MADDE LINKS PROCESSING ===');
   return result;
 }
