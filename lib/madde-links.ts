@@ -3,16 +3,16 @@
 
 export const documentUrlMapping: Record<string, string> = {
   // Ailə Məcəlləsi (Family Code)
-  'cleaned_document-ailə.md': 'https://e-qanun.az/framework/46946',
+  'cleaned_document-ailə.md': '46946',
   
   // Cinayət Məcəlləsi (Criminal Code)
-  'cleaned_document-cinayet.md': 'https://e-qanun.az/framework/46947',
+  'cleaned_document-cinayet.md': '46947',
   
   // Əmək Məcəlləsi (Labor Code)
-  'cleaned_document-əmək.md': 'https://e-qanun.az/framework/46943',
+  'cleaned_document-əmək.md': '46943',
   
   // Add other documents here as needed:
-  // 'cleaned_document-mülki.md': 'https://e-qanun.az/framework/XXXXX',
+  // 'cleaned_document-mülki.md': 'XXXXX',
   // etc...
 };
 
@@ -26,9 +26,9 @@ export function generateMaddeLink(
   maddeNumber: number | string,
   documentFilename: string
 ): string | null {
-  const baseUrl = documentUrlMapping[documentFilename];
+  const frameworkId = documentUrlMapping[documentFilename];
   
-  if (!baseUrl) {
+  if (!frameworkId) {
     console.warn(`No URL mapping found for document: ${documentFilename}`);
     return null;
   }
@@ -41,7 +41,50 @@ export function generateMaddeLink(
   // but e-qanun.az text fragment search requires them to be encoded
   encodedText = encodedText.replace(/-/g, '%2D');
   
-  return `${baseUrl}#:~:text=${encodedText}`;
+  return `https://e-qanun.az/framework/${frameworkId}#:~:text=${encodedText}`;
+}
+
+/**
+ * Detects the likely document type based on content keywords and context
+ * @param text - The full text content to analyze
+ * @returns Array of likely document filenames in order of probability
+ */
+function detectDocumentTypeFromContent(text: string): string[] {
+  const lowerText = text.toLowerCase();
+  
+  // Keywords for each legal code
+  const documentKeywords = {
+    'cleaned_document-əmək.md': [
+      'əmək', 'işçi', 'işəgötürən', 'maaş', 'məvacib', 'əmək müqaviləsi', 
+      'iş yeri', 'iş vaxtı', 'məzuniyyət', 'təhsil məzuniyyəti', 'sosial müdafiə'
+    ],
+    'cleaned_document-ailə.md': [
+      'ailə', 'nigah', 'evlilik', 'ər', 'arvad', 'uşaq', 'övlad', 'valideyn',
+      'boşanma', 'xərclik', 'ailə məhkəməsi'
+    ],
+    'cleaned_document-cinayet.md': [
+      'cinayət', 'cəza', 'məhkum', 'oğurluq', 'qətl', 'məsuliyyət',
+      'həbs', 'cərimə', 'cinayətkar'
+    ]
+  };
+  
+  const scores: { [key: string]: number } = {};
+  
+  // Score each document based on keyword matches
+  for (const [document, keywords] of Object.entries(documentKeywords)) {
+    scores[document] = 0;
+    for (const keyword of keywords) {
+      // Count occurrences of each keyword
+      const matches = (lowerText.match(new RegExp(keyword, 'g')) || []).length;
+      scores[document] += matches;
+    }
+  }
+  
+  // Sort by score (highest first) and return document names
+  return Object.entries(scores)
+    .sort(([,a], [,b]) => b - a)
+    .filter(([,score]) => score > 0) // Only return documents with matches
+    .map(([doc]) => doc);
 }
 
 /**
@@ -148,14 +191,19 @@ export function processMaddeLinks(
     : new Map<string, string>();
   
   // Get fallback source documents if no specific mapping is available
-  const fallbackDocuments = retrievalData 
+  let fallbackDocuments = retrievalData 
     ? extractSourceDocuments(retrievalData)
     : []; // No default fallback
+
+  // If no retrieval data or empty fallback, use content-based detection
+  if (fallbackDocuments.length === 0) {
+    fallbackDocuments = detectDocumentTypeFromContent(text);
+  }
   
-  // Pattern to match complete Maddə citations including bənd and subsections
-  // Examples: "Maddə 57", "Maddə 9", "Maddə 57, bənd 1", "Maddə 162, bənd 162-1.1", "Maddə 9, bənd \"ə\"", "Maddə 12, bənd 1, \"a\", \"b\""
+  // Pattern to match complete Maddə citations including bənd, Qeyd and subsections
+  // Examples: "Maddə 57", "Maddə 9", "Maddə 177, Qeyd 1", "Maddə 57, bənd 1", "Maddə 9, bənd \"ə\"", "Maddə 162, bənd 162-1.1", "Maddə 12, bənd 1, \"a\", \"b\""
   // This pattern captures the full citation text for linking
-  const maddePattern = /Maddə\s+\d+(?:-\d+(?:\.\d+)*)?(?:,\s*bənd\s+(?:[\d\-\.]+|[""'][^""']+[""']))?(?:,\s*[""'][^""']+[""'])*(?:,\s*[""'][^""']+[""'])*/g;
+  const maddePattern = /Maddə\s+\d+(?:-\d+(?:\.\d+)*)?(?:,\s*(?:bənd\s+(?:[\d\-\.]+|[""'][^""']*[""'])|Qeyd\s+\d+))?(?:,\s*[""'][^""']*[""'])*(?:,\s*[""'][^""']*[""'])*/g;
   
   const result = text.replace(maddePattern, (fullMatch) => {
     // Extract just the article number from the full match for mapping
@@ -184,6 +232,6 @@ export function processMaddeLinks(
     // If no link found, return the original text
     return fullMatch;
   });
-  
+
   return result;
 }
