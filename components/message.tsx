@@ -35,6 +35,7 @@ const PurePreviewMessage = ({
   isReadonly,
   requiresScrollPadding,
   isArtifactVisible,
+  retrievalData,
 }: {
   chatId: string;
   message: ChatMessage;
@@ -45,6 +46,7 @@ const PurePreviewMessage = ({
   isReadonly: boolean;
   requiresScrollPadding: boolean;
   isArtifactVisible: boolean;
+  retrievalData?: any;
 }) => {
   const [mode, setMode] = useState<'view' | 'edit'>('view');
 
@@ -140,7 +142,7 @@ const PurePreviewMessage = ({
                           : undefined
                       }
                     >
-                      <Response>{sanitizeText(part.text)}</Response>
+                      <Response retrievalData={retrievalData}>{sanitizeText(part.text)}</Response>
                     </MessageContent>
                   </div>
                 );

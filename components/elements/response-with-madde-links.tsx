@@ -5,13 +5,15 @@ import { type ComponentProps, memo } from 'react';
 import { Streamdown } from 'streamdown';
 import { processMaddeLinks } from '@/lib/madde-links';
 
-type ResponseProps = ComponentProps<typeof Streamdown>;
+type ResponseProps = ComponentProps<typeof Streamdown> & {
+  retrievalData?: string | any; // Add this prop to pass retrieval data
+};
 
 export const Response = memo(
-  ({ className, children, ...props }: ResponseProps) => {
+  ({ className, children, retrievalData, ...props }: ResponseProps) => {
     // Process the content to convert Maddə references to links
     const processedContent = typeof children === 'string' 
-      ? processMaddeLinks(children)
+      ? processMaddeLinks(children, retrievalData)
       : children;
 
     return (

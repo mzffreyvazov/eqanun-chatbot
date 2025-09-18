@@ -140,11 +140,13 @@ export async function POST(request: Request) {
 
     // Retrieve relevant documents from RAG backend
     let retrievedContext: string | undefined;
+    let rawRetrievalResponse: any | undefined;
     if (userQuery.trim()) {
       console.log('=== RAG INTEGRATION ===');
       console.log('User query for RAG:', userQuery);
       try {
         const retrievalResponse = await retrieveDocuments(userQuery);
+        rawRetrievalResponse = retrievalResponse; // Store raw response for link generation
         retrievedContext = await formatRetrievedContext(retrievalResponse);
         console.log('RAG context length:', retrievedContext.length);
         console.log('Retrieved context preview:', retrievedContext.substring(0, 200) + '...');
@@ -158,6 +160,14 @@ export async function POST(request: Request) {
 
     const stream = createUIMessageStream({
       execute: ({ writer: dataStream }) => {
+        // Send retrieval data to frontend for link generation
+        if (rawRetrievalResponse) {
+          dataStream.write({ 
+            type: 'data-retrieval', 
+            data: rawRetrievalResponse 
+          });
+        }
+        
         const result = streamText({
           model: myProvider.languageModel(selectedChatModel),
           system: systemPrompt({ 

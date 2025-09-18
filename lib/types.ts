@@ -43,6 +43,7 @@ export type CustomUIDataTypes = {
   clear: null;
   finish: null;
   usage: LanguageModelUsage;
+  retrieval: RetrievalResponse;
 };
 
 export type ChatMessage = UIMessage<

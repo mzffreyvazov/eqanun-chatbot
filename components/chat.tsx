@@ -54,6 +54,7 @@ export function Chat({
   const [usage, setUsage] = useState<LanguageModelUsage | undefined>(
     initialLastContext,
   );
+  const [retrievalData, setRetrievalData] = useState<any>(undefined);
 
   const {
     messages,
@@ -87,6 +88,9 @@ export function Chat({
       setDataStream((ds) => (ds ? [...ds, dataPart] : []));
       if (dataPart.type === 'data-usage') {
         setUsage(dataPart.data);
+      }
+      if (dataPart.type === 'data-retrieval') {
+        setRetrievalData(dataPart.data);
       }
     },
     onFinish: () => {
@@ -154,6 +158,7 @@ export function Chat({
           isReadonly={isReadonly}
           isArtifactVisible={isArtifactVisible}
           selectedModelId={initialChatModel}
+          retrievalData={retrievalData}
         />
 
         <div className="sticky bottom-0 z-1 mx-auto flex w-full max-w-4xl gap-2 border-t-0 bg-background px-2 pb-3 md:px-4 md:pb-4">

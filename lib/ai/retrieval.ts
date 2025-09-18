@@ -64,7 +64,9 @@ export async function formatRetrievedContext(response: RetrievalResponse): Promi
   }
 
   const contextSections = response.chunks.map((chunk, index) => {
+    // Include both display name and document filename for link generation
     return `## Mənbə ${index + 1} (${chunk.metadata.display_source_name})
+<!-- document_filename: ${chunk.metadata.document_filename} -->
 ${chunk.content}
 ---`;
   });

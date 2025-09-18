@@ -20,6 +20,7 @@ interface MessagesProps {
   isReadonly: boolean;
   isArtifactVisible: boolean;
   selectedModelId: string;
+  retrievalData?: any;
 }
 
 function PureMessages({
@@ -32,6 +33,7 @@ function PureMessages({
   isReadonly,
   isArtifactVisible,
   selectedModelId,
+  retrievalData,
 }: MessagesProps) {
   const {
     containerRef: messagesContainerRef,
@@ -90,6 +92,7 @@ function PureMessages({
                 hasSentMessage && index === messages.length - 1
               }
               isArtifactVisible={isArtifactVisible}
+              retrievalData={retrievalData}
             />
           ))}
 
