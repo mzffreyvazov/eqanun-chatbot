@@ -136,8 +136,9 @@ export function createArticleToDocumentMap(retrievalData: any): Map<string, stri
       const documentFilename = chunk.metadata?.document_filename;
       
       if (articleHeader && documentFilename) {
-        // Extract article number from "Maddə X. Title" format
-        const match = articleHeader.match(/Maddə\s+(\d+(?:-\d+)?)/);
+        // Extract article number from formats like "Maddə 1", "Maddə 7-1", "Maddə 1.1", "Maddə 162-1.1"
+        // Accept digits, optional hyphenated part, and optional dotted subsections (e.g. 162-1.1)
+        const match = articleHeader.match(/Maddə\s+(\d+(?:-\d+)?(?:\.\d+)*)/);
         if (match) {
           const articleNumber = match[1];
           articleMap.set(articleNumber, documentFilename);
@@ -161,8 +162,8 @@ export function createArticleToDocumentMap(retrievalData: any): Map<string, stri
       
       const documentFilename = documentMatch[1];
       
-      // Extract all Maddə references from this section
-      const maddePattern = /Maddə\s+(\d+(?:-\d+)?)/g;
+  // Extract all Maddə references including dotted numbers (e.g. 1.1)
+  const maddePattern = /Maddə\s+(\d+(?:-\d+)?(?:\.\d+)*)/g;
       let maddeMatch;
       
       while ((maddeMatch = maddePattern.exec(section)) !== null) {
@@ -203,11 +204,14 @@ export function processMaddeLinks(
   // Pattern to match complete Maddə citations including bənd, Qeyd and subsections
   // Examples: "Maddə 57", "Maddə 9", "Maddə 177, Qeyd 1", "Maddə 57, bənd 1", "Maddə 9, bənd \"ə\"", "Maddə 162, bənd 162-1.1", "Maddə 12, bənd 1, \"a\", \"b\""
   // This pattern captures the full citation text for linking
-  const maddePattern = /Maddə\s+\d+(?:-\d+(?:\.\d+)*)?(?:,\s*(?:bənd\s+(?:[\d\-\.]+|[""'][^""']*[""'])|Qeyd\s+\d+))?(?:,\s*[""'][^""']*[""'])*(?:,\s*[""'][^""']*[""'])*/g;
+  // Match article references like: "Maddə 57", "Maddə 9", "Maddə 177, Qeyd 1",
+  // "Maddə 57, bənd 1", "Maddə 9, bənd \"ə\"", "Maddə 162-1.1", "Maddə 1.1"
+  // This pattern captures the full citation text for linking
+  const maddePattern = /Maddə\s+\d+(?:-\d+)?(?:\.\d+)*(?:,\s*(?:bənd\s+(?:[\d\-\.]+|["''][^"'']*["''])|Qeyd\s+\d+))?(?:,\s*["''][^"'']*["''])*(?:,\s*["''][^"'']*["''])*/g;
   
   const result = text.replace(maddePattern, (fullMatch) => {
     // Extract just the article number from the full match for mapping
-    const articleNumberMatch = fullMatch.match(/Maddə\s+(\d+(?:-\d+(?:\.\d+)*)?)/);
+  const articleNumberMatch = fullMatch.match(/Maddə\s+(\d+(?:-\d+)?(?:\.\d+)*)/);
     if (!articleNumberMatch) return fullMatch;
     
     const articleNumber = articleNumberMatch[1];
