@@ -28,7 +28,7 @@ export function SidebarToggle({
         </Button>
       </TooltipTrigger>
       <TooltipContent align="start" className="hidden md:block">
-        Toggle Sidebar
+        Yan paneli göstər/gizlət
       </TooltipContent>
     </Tooltip>
   );
