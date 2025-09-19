@@ -39,7 +39,11 @@ import { retrieveDocuments, formatRetrievedContext } from '@/lib/ai/retrieval';
 
 export const maxDuration = 60;
 
-export function getStreamContext() {
+interface StreamContext {
+  resumableStream: (streamId: string, fallback: () => ReadableStream) => Promise<ReadableStream | null>;
+}
+
+export function getStreamContext(): StreamContext | null {
   // Skip Redis/resumable streams functionality
   console.log(' > Resumable streams are disabled (Redis not configured)');
   return null;
