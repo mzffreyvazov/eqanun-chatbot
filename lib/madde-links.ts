@@ -16,10 +16,6 @@ export const documentUrlMapping: Record<string, string> = {
 
   // İnzibati Xətalar Məcəlləsi (Code of Administrative Offenses) 
   'cleaned_document-inzibati-xetalar.md': '46960',  
-  
-  // Add other documents here as needed:
-  // 'cleaned_document-mülki.md': 'XXXXX',
-  // etc...
 };
 
 /**

@@ -77,10 +77,15 @@ const PurePreviewMessage = ({
         .filter((value): value is string => Boolean(value)),
     ),
   ).slice(0, 3);
+  const hasRetrievalActivity =
+    isRetrieving ||
+    isCompiling ||
+    foundDocuments > 0 ||
+    retrievalSources.length > 0;
   const shouldShowRetrievalStatus =
     message.role === 'assistant' &&
     isLatestAssistant &&
-    (isRetrieving || isCompiling || foundDocuments > 0 || retrievalSources.length > 0);
+    hasRetrievalActivity;
 
   return (
     <motion.div

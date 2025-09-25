@@ -41,6 +41,8 @@ export function MessageRetrievalStatus({
   };
 
   const statusContent = getStatusContent();
+  const shouldRenderStatusParagraph =
+    statusContent !== null && (isRetrieving || isCompiling);
 
   return (
     <RetrievalStatus
@@ -53,7 +55,9 @@ export function MessageRetrievalStatus({
       <RetrievalStatusTrigger />
       {(statusContent || children) && (
         <RetrievalStatusContent>
-          {statusContent && <p className="text-muted-foreground">{statusContent}</p>}
+          {shouldRenderStatusParagraph && (
+            <p className="text-muted-foreground">{statusContent}</p>
+          )}
           {children}
         </RetrievalStatusContent>
       )}
