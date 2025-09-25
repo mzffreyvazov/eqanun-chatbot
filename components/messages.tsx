@@ -5,7 +5,7 @@ import type { Vote } from '@/lib/db/schema';
 import equal from 'fast-deep-equal';
 import type { UseChatHelpers } from '@ai-sdk/react';
 import { useMessages } from '@/hooks/use-messages';
-import type { ChatMessage } from '@/lib/types';
+import type { ChatMessage, RetrievalResponse } from '@/lib/types';
 import { useDataStream } from './data-stream-provider';
 import { Conversation, ConversationContent } from './elements/conversation';
 import { ArrowDownIcon } from 'lucide-react';
@@ -20,7 +20,10 @@ interface MessagesProps {
   isReadonly: boolean;
   isArtifactVisible: boolean;
   selectedModelId: string;
-  retrievalData?: any;
+  retrievalData?: RetrievalResponse;
+  isRetrieving?: boolean;
+  isCompiling?: boolean;
+  foundDocuments?: number;
 }
 
 function PureMessages({
@@ -34,6 +37,9 @@ function PureMessages({
   isArtifactVisible,
   selectedModelId,
   retrievalData,
+  isRetrieving = false,
+  isCompiling = false,
+  foundDocuments = 0,
 }: MessagesProps) {
   const {
     containerRef: messagesContainerRef,
@@ -72,29 +78,38 @@ function PureMessages({
         <ConversationContent className="flex flex-col gap-4 px-2 py-4 md:gap-6 md:px-4">
           {messages.length === 0 && <Greeting />}
 
-          {messages.map((message, index) => (
-            <PreviewMessage
-              key={message.id}
-              chatId={chatId}
-              message={message}
-              isLoading={
-                status === 'streaming' && messages.length - 1 === index
-              }
-              vote={
-                votes
-                  ? votes.find((vote) => vote.messageId === message.id)
-                  : undefined
-              }
-              setMessages={setMessages}
-              regenerate={regenerate}
-              isReadonly={isReadonly}
-              requiresScrollPadding={
-                hasSentMessage && index === messages.length - 1
-              }
-              isArtifactVisible={isArtifactVisible}
-              retrievalData={retrievalData}
-            />
-          ))}
+          {messages.map((message, index) => {
+            const isLatestMessage = index === messages.length - 1;
+            return (
+              <PreviewMessage
+                key={message.id}
+                chatId={chatId}
+                message={message}
+                isLoading={
+                  status === 'streaming' && messages.length - 1 === index
+                }
+                vote={
+                  votes
+                    ? votes.find((vote) => vote.messageId === message.id)
+                    : undefined
+                }
+                setMessages={setMessages}
+                regenerate={regenerate}
+                isReadonly={isReadonly}
+                requiresScrollPadding={
+                  hasSentMessage && isLatestMessage
+                }
+                isArtifactVisible={isArtifactVisible}
+                retrievalData={retrievalData}
+                isLatestAssistant={
+                  isLatestMessage && message.role === 'assistant'
+                }
+                isRetrieving={isRetrieving}
+                isCompiling={isCompiling}
+                foundDocuments={foundDocuments}
+              />
+            );
+          })}
 
           {status === 'submitted' &&
             messages.length > 0 &&
@@ -128,8 +143,12 @@ export const Messages = memo(PureMessages, (prevProps, nextProps) => {
   if (prevProps.status !== nextProps.status) return false;
   if (prevProps.selectedModelId !== nextProps.selectedModelId) return false;
   if (prevProps.messages.length !== nextProps.messages.length) return false;
+  if (prevProps.isRetrieving !== nextProps.isRetrieving) return false;
+  if (prevProps.isCompiling !== nextProps.isCompiling) return false;
+  if (prevProps.foundDocuments !== nextProps.foundDocuments) return false;
   if (!equal(prevProps.messages, nextProps.messages)) return false;
   if (!equal(prevProps.votes, nextProps.votes)) return false;
+  if (!equal(prevProps.retrievalData, nextProps.retrievalData)) return false;
 
   return false;
 });

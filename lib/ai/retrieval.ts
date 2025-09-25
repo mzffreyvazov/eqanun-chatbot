@@ -8,7 +8,7 @@ import type { RetrievalRequest, RetrievalResponse } from '@/lib/types';
  */
 export async function retrieveDocuments(
   query: string,
-  nResults: number = 10
+  nResults = 10
 ): Promise<RetrievalResponse> {
   const requestBody: RetrievalRequest = {
     query,
@@ -38,7 +38,7 @@ export async function retrieveDocuments(
     console.log('Number of chunks retrieved:', retrievalResponse.chunks.length);
     if (retrievalResponse.chunks.length > 0) {
       console.log('First chunk content (500 chars):', 
-        retrievalResponse.chunks[0].content.substring(0, 500) + '...');
+        `${retrievalResponse.chunks[0].content.substring(0, 500)}...`);
       console.log('Source:', retrievalResponse.chunks[0].metadata.display_source_name);
     }
     console.log('=== END RAG DEBUG ===');

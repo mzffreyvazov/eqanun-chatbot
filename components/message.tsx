@@ -21,8 +21,9 @@ import { cn, sanitizeText } from '@/lib/utils';
 import { MessageEditor } from './message-editor';
 import { DocumentPreview } from './document-preview';
 import { MessageReasoning } from './message-reasoning';
+import { MessageRetrievalStatus } from './message-retrieval-status';
 import type { UseChatHelpers } from '@ai-sdk/react';
-import type { ChatMessage } from '@/lib/types';
+import type { ChatMessage, RetrievalChunk, RetrievalResponse } from '@/lib/types';
 import { useDataStream } from './data-stream-provider';
 
 const PurePreviewMessage = ({
@@ -36,6 +37,10 @@ const PurePreviewMessage = ({
   requiresScrollPadding,
   isArtifactVisible,
   retrievalData,
+  isLatestAssistant = false,
+  isRetrieving = false,
+  isCompiling = false,
+  foundDocuments = 0,
 }: {
   chatId: string;
   message: ChatMessage;
@@ -46,7 +51,11 @@ const PurePreviewMessage = ({
   isReadonly: boolean;
   requiresScrollPadding: boolean;
   isArtifactVisible: boolean;
-  retrievalData?: any;
+  retrievalData?: RetrievalResponse;
+  isLatestAssistant?: boolean;
+  isRetrieving?: boolean;
+  isCompiling?: boolean;
+  foundDocuments?: number;
 }) => {
   const [mode, setMode] = useState<'view' | 'edit'>('view');
 
@@ -55,6 +64,23 @@ const PurePreviewMessage = ({
   );
 
   useDataStream();
+
+  const retrievalChunks: RetrievalChunk[] = retrievalData?.chunks ?? [];
+  const retrievalSources: string[] = Array.from(
+    new Set(
+      retrievalChunks
+        .map((chunk) =>
+          chunk.metadata.display_source_name ??
+          chunk.metadata.document_title ??
+          chunk.metadata.document_filename,
+        )
+        .filter((value): value is string => Boolean(value)),
+    ),
+  ).slice(0, 3);
+  const shouldShowRetrievalStatus =
+    message.role === 'assistant' &&
+    isLatestAssistant &&
+    (isRetrieving || isCompiling || foundDocuments > 0 || retrievalSources.length > 0);
 
   return (
     <motion.div
@@ -271,6 +297,27 @@ const PurePreviewMessage = ({
               );
             }
           })}
+
+          {shouldShowRetrievalStatus && (
+            <MessageRetrievalStatus
+              isRetrieving={isRetrieving}
+              isCompiling={isCompiling}
+              foundDocuments={foundDocuments}
+            >
+              {retrievalSources.length > 0 && (
+                <div className="flex flex-col gap-1">
+                  <p className="text-muted-foreground/80 text-xs">
+                    İstinad edilən mənbələr:
+                  </p>
+                  <ul className="list-disc space-y-1 pl-5 text-muted-foreground text-xs">
+                    {retrievalSources.map((source) => (
+                      <li key={source}>{source}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </MessageRetrievalStatus>
+          )}
 
           {!isReadonly && (
             <MessageActions

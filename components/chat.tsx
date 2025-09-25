@@ -20,7 +20,7 @@ import { useSearchParams } from 'next/navigation';
 import { useChatVisibility } from '@/hooks/use-chat-visibility';
 import { useAutoResume } from '@/hooks/use-auto-resume';
 import { ChatSDKError } from '@/lib/errors';
-import type { Attachment, ChatMessage } from '@/lib/types';
+import type { Attachment, ChatMessage, RetrievalResponse } from '@/lib/types';
 import { useDataStream } from './data-stream-provider';
 
 export function Chat({
@@ -54,7 +54,12 @@ export function Chat({
   const [usage, setUsage] = useState<LanguageModelUsage | undefined>(
     initialLastContext,
   );
-  const [retrievalData, setRetrievalData] = useState<any>(undefined);
+  const [retrievalData, setRetrievalData] = useState<
+    RetrievalResponse | undefined
+  >(undefined);
+  const [isRetrieving, setIsRetrieving] = useState<boolean>(false);
+  const [isCompiling, setIsCompiling] = useState<boolean>(false);
+  const [foundDocuments, setFoundDocuments] = useState<number>(0);
 
   const {
     messages,
@@ -90,13 +95,27 @@ export function Chat({
         setUsage(dataPart.data);
       }
       if (dataPart.type === 'data-retrieval') {
-        setRetrievalData(dataPart.data);
+        setRetrievalData(dataPart.data as RetrievalResponse);
+      }
+      if (dataPart.type === 'data-retrieval-start') {
+        setIsRetrieving(true);
+      }
+      if (dataPart.type === 'data-retrieval-complete') {
+        setIsRetrieving(false);
+        setFoundDocuments(dataPart.data?.foundDocuments || 0);
+      }
+      if (dataPart.type === 'data-compilation-start') {
+        setIsCompiling(true);
       }
     },
     onFinish: () => {
       mutate(unstable_serialize(getChatHistoryPaginationKey));
+      setIsCompiling(false);
+      setIsRetrieving(false);
     },
     onError: (error) => {
+      setIsRetrieving(false);
+      setIsCompiling(false);
       if (error instanceof ChatSDKError) {
         toast({
           type: 'error',
@@ -110,6 +129,31 @@ export function Chat({
   const query = searchParams.get('query');
 
   const [hasAppendedQuery, setHasAppendedQuery] = useState(false);
+
+  // Reset retrieval status when streaming starts (text deltas indicate streaming has begun)
+  useEffect(() => {
+    if (status === 'streaming') {
+      // Check if we have any text deltas in the data stream, which indicates actual content streaming
+      const hasTextContent = messages.some(msg => 
+        msg.role === 'assistant' && 
+        msg.parts.some(part => part.type === 'text' && part.text && part.text.length > 0)
+      );
+      
+      if (hasTextContent) {
+        setIsCompiling(false);
+      }
+    }
+  }, [status, messages]);
+
+  // Reset retrieval states when a new message is sent
+  useEffect(() => {
+    if (status === 'submitted') {
+      setIsRetrieving(true);
+      setIsCompiling(false);
+      setFoundDocuments(0);
+      setRetrievalData(undefined);
+    }
+  }, [status]);
 
   useEffect(() => {
     if (query && !hasAppendedQuery) {
@@ -159,6 +203,9 @@ export function Chat({
           isArtifactVisible={isArtifactVisible}
           selectedModelId={initialChatModel}
           retrievalData={retrievalData}
+          isRetrieving={isRetrieving}
+          isCompiling={isCompiling}
+          foundDocuments={foundDocuments}
         />
 
         <div className="sticky bottom-0 z-1 mx-auto flex w-full max-w-4xl gap-2 border-t-0 bg-background px-2 pb-3 md:px-4 md:pb-4">

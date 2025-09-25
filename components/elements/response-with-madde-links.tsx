@@ -24,12 +24,12 @@ export const Response = memo(
           '[&_a[href*="e-qanun.az"]]:inline-flex [&_a[href*="e-qanun.az"]]:items-center [&_a[href*="e-qanun.az"]]:whitespace-nowrap',
           '[&_a[href*="e-qanun.az"]]:rounded-full [&_a[href*="e-qanun.az"]]:px-1 [&_a[href*="e-qanun.az"]]:py-px [&_a[href*="e-qanun.az"]]:text-[10px]',
           '[&_a[href*="e-qanun.az"]]:no-underline [&_a[href*="e-qanun.az"]]:transition-colors',
-          '[&_a[href*="e-qanun.az"]]:bg-blue-50 [&_a[href*="e-qanun.az"]]:text-blue-700 [&_a[href*="e-qanun.az"]]:border [&_a[href*="e-qanun.az"]]:border-blue-200',
+          '[&_a[href*="e-qanun.az"]]:border [&_a[href*="e-qanun.az"]]:border-blue-200 [&_a[href*="e-qanun.az"]]:bg-blue-50 [&_a[href*="e-qanun.az"]]:text-blue-700',
           'hover:[&_a[href*="e-qanun.az"]]:bg-blue-100',
           '[&_a[href*="e-qanun.az"]]:focus-visible:outline-none [&_a[href*="e-qanun.az"]]:focus-visible:ring-2 [&_a[href*="e-qanun.az"]]:focus-visible:ring-blue-300',
           // Dark mode variants
-          '[&_a[href*="e-qanun.az"]]:dark:bg-blue-500/10 [&_a[href*="e-qanun.az"]]:dark:text-blue-300 [&_a[href*="e-qanun.az"]]:dark:border-blue-400/30',
-          'dark:hover:[&_a[href*="e-qanun.az"]]:bg-blue-500/20 dark:[&_a[href*="e-qanun.az"]]:focus-visible:ring-blue-400/40',
+          '[&_a[href*="e-qanun.az"]]:dark:border-blue-400/30 [&_a[href*="e-qanun.az"]]:dark:bg-blue-500/10 [&_a[href*="e-qanun.az"]]:dark:text-blue-300',
+          'dark:[&_a[href*="e-qanun.az"]]:focus-visible:ring-blue-400/40 dark:hover:[&_a[href*="e-qanun.az"]]:bg-blue-500/20',
           className,
         )}
         components={{

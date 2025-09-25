@@ -10,12 +10,12 @@ export const chatModels: Array<ChatModel> = [
   {
     id: 'gemini-2.5-flash',
     name: 'Gemini 2.5 Flash',
-    description: 'Fast, low-latency multimodal model from Google',
+    description: 'Google-dan sürətli, az gecikməli multimodal model',
   },
   {
     id: 'gemini-2.0-flash',
     name: 'Gemini 2.0 Flash',
-    description: 'Balanced quality/speed multimodal model from Google',
+    description: 'Google-dan balanslaşdırılmış keyfiyyət/sürət multimodal modeli',
   },
 ];
 

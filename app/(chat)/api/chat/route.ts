@@ -30,7 +30,6 @@ import { myProvider } from '@/lib/ai/providers';
 import { entitlementsByUserType } from '@/lib/ai/entitlements';
 import { postRequestBodySchema, type PostRequestBody } from './schema';
 import { geolocation } from '@vercel/functions';
-import { after } from 'next/server';
 import { ChatSDKError } from '@/lib/errors';
 import type { ChatMessage } from '@/lib/types';
 import type { ChatModel } from '@/lib/ai/models';
@@ -142,33 +141,67 @@ export async function POST(request: Request) {
       .map((part) => part.text)
       .join(' ');
 
-    // Retrieve relevant documents from RAG backend
+    let finalUsage: LanguageModelUsage | undefined;
+    
+    // Pre-fetch retrieval data
     let retrievedContext: string | undefined;
     let rawRetrievalResponse: any | undefined;
+    let foundDocuments = 0;
+    
     if (userQuery.trim()) {
       console.log('=== RAG INTEGRATION ===');
       console.log('User query for RAG:', userQuery);
       try {
         const retrievalResponse = await retrieveDocuments(userQuery);
-        rawRetrievalResponse = retrievalResponse; // Store raw response for link generation
+        rawRetrievalResponse = retrievalResponse;
         retrievedContext = await formatRetrievedContext(retrievalResponse);
+        foundDocuments = retrievalResponse.chunks.length;
         console.log('RAG context length:', retrievedContext.length);
-        console.log('Retrieved context preview:', retrievedContext.substring(0, 200) + '...');
+        console.log('Retrieved context preview:', `${retrievedContext.substring(0, 200)}...`);
       } catch (error) {
         console.warn('RAG retrieval failed, continuing without context:', error);
       }
       console.log('=== END RAG INTEGRATION ===');
     }
 
-    let finalUsage: LanguageModelUsage | undefined;
-
     const stream = createUIMessageStream({
       execute: ({ writer: dataStream }) => {
-        // Send retrieval data to frontend for link generation
-        if (rawRetrievalResponse) {
+        // Send status updates with realistic timing
+        if (userQuery.trim()) {
           dataStream.write({ 
-            type: 'data-retrieval', 
-            data: rawRetrievalResponse 
+            type: 'data-retrieval-start', 
+            data: null 
+          });
+          
+          // Simulate retrieval time for better UX
+          setTimeout(() => {
+            dataStream.write({ 
+              type: 'data-retrieval-complete', 
+              data: { foundDocuments } 
+            });
+            
+            // Send retrieval data for link generation
+            if (rawRetrievalResponse) {
+              dataStream.write({ 
+                type: 'data-retrieval', 
+                data: rawRetrievalResponse 
+              });
+            }
+            
+            // Send compilation start status after a brief delay
+            setTimeout(() => {
+              dataStream.write({ 
+                type: 'data-compilation-start', 
+                data: null 
+              });
+            }, 300);
+            
+          }, 800); // Show retrieval status for 800ms
+        } else {
+          // If no query, just show compilation start
+          dataStream.write({ 
+            type: 'data-compilation-start', 
+            data: null 
           });
         }
         

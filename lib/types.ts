@@ -44,6 +44,9 @@ export type CustomUIDataTypes = {
   finish: null;
   usage: LanguageModelUsage;
   retrieval: RetrievalResponse;
+  'retrieval-start': null;
+  'retrieval-complete': { foundDocuments: number };
+  'compilation-start': null;
 };
 
 export type ChatMessage = UIMessage<

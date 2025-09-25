@@ -10,6 +10,12 @@ export const documentUrlMapping: Record<string, string> = {
   
   // Əmək Məcəlləsi (Labor Code)
   'cleaned_document-əmək.md': '46943',
+
+  // Torpaq Məcəlləsi (Land Code)
+  'cleaned_document-torpaq.md': '46942', 
+
+  // İnzibati Xətalar Məcəlləsi (Code of Administrative Offenses) 
+  'cleaned_document-inzibati-xetalar.md': '46960',  
   
   // Add other documents here as needed:
   // 'cleaned_document-mülki.md': 'XXXXX',
