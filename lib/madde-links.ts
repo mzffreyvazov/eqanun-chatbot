@@ -16,6 +16,8 @@ export const documentUrlMapping: Record<string, string> = {
 
   // İnzibati Xətalar Məcəlləsi (Code of Administrative Offenses) 
   'cleaned_document-inzibati-xetalar.md': '46960',  
+
+  'cleaned_document-mulki-mecelle-v2.md': '46944', // Mülki Məcəllə (Civil Code)
 };
 
 /**
@@ -29,7 +31,7 @@ export function generateMaddeLink(
   documentFilename: string
 ): string | null {
   const frameworkId = documentUrlMapping[documentFilename];
-  
+  const maddePattern = /Maddə\s+\d+(?:-\d+)?(?:\.\d+)*(?:,\s*(?:bənd\s+(?:[\d\-\.]+|["'][^"']*["'])|Qeyd\s+\d+|["'][^"']*["']))*/g;
   if (!frameworkId) {
     console.warn(`No URL mapping found for document: ${documentFilename}`);
     return null;

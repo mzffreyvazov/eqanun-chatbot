@@ -9,6 +9,8 @@ import type { ChatMessage, RetrievalResponse } from '@/lib/types';
 import { useDataStream } from './data-stream-provider';
 import { Conversation, ConversationContent } from './elements/conversation';
 import { ArrowDownIcon } from 'lucide-react';
+import { MessageRetrievalStatus } from './message-retrieval-status';
+import { SparklesIcon } from './icons';
 
 interface MessagesProps {
   chatId: string;
@@ -68,6 +70,25 @@ function PureMessages({
     }
   }, [status, messagesContainerRef]);
 
+  const retrievalChunks = retrievalData?.chunks ?? [];
+  const retrievalSources = Array.from(
+    new Set(
+      retrievalChunks
+        .map((chunk) =>
+          chunk.metadata.display_source_name ??
+          chunk.metadata.document_title ??
+          chunk.metadata.document_filename,
+        )
+        .filter((value): value is string => Boolean(value)),
+    ),
+  ).slice(0, 3);
+
+  const latestMessage = messages.at(-1);
+  const isAwaitingAssistant = !latestMessage || latestMessage.role === 'user';
+  const shouldShowGlobalStatus =
+    isAwaitingAssistant &&
+    (isRetrieving || isCompiling || foundDocuments > 0 || retrievalSources.length > 0);
+
   return (
     <div
       ref={messagesContainerRef}
@@ -111,10 +132,40 @@ function PureMessages({
             );
           })}
 
+          {shouldShowGlobalStatus && (
+            <div className="flex items-start gap-2 md:gap-3">
+              <div className="-mt-1 flex size-8 shrink-0 items-center justify-center rounded-full bg-background ring-1 ring-border">
+                <SparklesIcon size={14} />
+              </div>
+
+              <div className="flex flex-col gap-2 md:gap-4">
+                <MessageRetrievalStatus
+                  isRetrieving={isRetrieving}
+                  isCompiling={isCompiling}
+                  foundDocuments={foundDocuments}
+                >
+                  {retrievalSources.length > 0 && (
+                    <div className="flex flex-col gap-1">
+                      <p className="text-muted-foreground/80 text-xs">
+                        İstinad edilən mənbələr:
+                      </p>
+                      <ul className="list-disc space-y-1 pl-5 text-muted-foreground text-xs">
+                        {retrievalSources.map((source) => (
+                          <li key={source}>{source}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </MessageRetrievalStatus>
+              </div>
+            </div>
+          )}
+
           {status === 'submitted' &&
             messages.length > 0 &&
             messages[messages.length - 1].role === 'user' &&
-            selectedModelId !== 'chat-model-reasoning' && <ThinkingMessage />}
+            selectedModelId !== 'chat-model-reasoning' &&
+            !shouldShowGlobalStatus && <ThinkingMessage />}
 
           <div
             ref={messagesEndRef}
