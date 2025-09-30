@@ -17,7 +17,16 @@ export const documentUrlMapping: Record<string, string> = {
   // İnzibati Xətalar Məcəlləsi (Code of Administrative Offenses) 
   'cleaned_document-inzibati-xetalar.md': '46960',  
 
-  'cleaned_document-mulki-mecelle-v2.md': '46944', // Mülki Məcəllə (Civil Code)
+  // Mülki Məcəllə (Civil Code)
+  'cleaned_document-mulki-mecelle-v2.md': '46944', 
+
+  // İnzibati Prosessual Məcəllə (Code of Administrative Procedure)
+  'cleaned_document-inzibati-prosessual.md': '46956',
+
+  'cleaned_document-menzil.md': '46955',
+
+  'cleaned_document-vergi.md': '46948'
+
 };
 
 /**

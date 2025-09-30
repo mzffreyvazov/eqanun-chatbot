@@ -8,7 +8,7 @@ import type { RetrievalRequest, RetrievalResponse } from '@/lib/types';
  */
 export async function retrieveDocuments(
   query: string,
-  nResults = 10
+  nResults = 20
 ): Promise<RetrievalResponse> {
   const requestBody: RetrievalRequest = {
     query,
