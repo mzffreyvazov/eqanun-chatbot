@@ -35,18 +35,9 @@ import type { ChatMessage } from '@/lib/types';
 import type { ChatModel } from '@/lib/ai/models';
 import type { VisibilityType } from '@/components/visibility-selector';
 import { retrieveDocuments, formatRetrievedContext } from '@/lib/ai/retrieval';
+import { getResumableStreamContext } from '@/lib/redis';
 
 export const maxDuration = 60;
-
-interface StreamContext {
-  resumableStream: (streamId: string, fallback: () => ReadableStream) => Promise<ReadableStream | null>;
-}
-
-export function getStreamContext(): StreamContext | null {
-  // Skip Redis/resumable streams functionality
-  console.log(' > Resumable streams are disabled (Redis not configured)');
-  return null;
-}
 
 export async function POST(request: Request) {
   let requestBody: PostRequestBody;
@@ -75,6 +66,18 @@ export async function POST(request: Request) {
 
     if (!session?.user) {
       return new ChatSDKError('unauthorized:chat').toResponse();
+    }
+
+    // Get Supabase access token for RAG backend authentication
+    const supabaseAccessToken = session.supabase?.accessToken;
+
+    if (!supabaseAccessToken) {
+      console.error('[Auth Error] No Supabase token in session. User:', session.user.email);
+      console.error('[Auth Error] Session supabase object:', session.supabase);
+      return new ChatSDKError(
+        'unauthorized:chat',
+        'Supabase authentication token is missing. Please sign out and sign in again.',
+      ).toResponse();
     }
 
     const userType: UserType = session.user.type;
@@ -152,7 +155,10 @@ export async function POST(request: Request) {
       console.log('=== RAG INTEGRATION ===');
       console.log('User query for RAG:', userQuery);
       try {
-        const retrievalResponse = await retrieveDocuments(userQuery);
+        const retrievalResponse = await retrieveDocuments(
+          userQuery,
+          supabaseAccessToken,
+        );
         rawRetrievalResponse = retrievalResponse;
         retrievedContext = await formatRetrievedContext(retrievalResponse);
         foundDocuments = retrievalResponse.chunks.length;
@@ -280,9 +286,19 @@ export async function POST(request: Request) {
       },
     });
 
-    const streamContext = getStreamContext();
+    const streamContext = await getResumableStreamContext();
 
-    // Always use direct streaming (no Redis/resumable streams)
+    if (streamContext) {
+      // Use resumable stream via Redis
+      const resumableStream = await streamContext.resumableStream(
+        streamId,
+        () => stream.pipeThrough(new JsonToSseTransformStream())
+      );
+      return new Response(resumableStream ?? stream.pipeThrough(new JsonToSseTransformStream()));
+    }
+
+    // Fallback to direct streaming when Redis is not available
+    console.warn('Resumable streams disabled: missing REDIS_URL');
     return new Response(stream.pipeThrough(new JsonToSseTransformStream()));
   } catch (error) {
     if (error instanceof ChatSDKError) {

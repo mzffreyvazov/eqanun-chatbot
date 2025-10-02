@@ -8,8 +8,13 @@ import type { RetrievalRequest, RetrievalResponse } from '@/lib/types';
  */
 export async function retrieveDocuments(
   query: string,
+  accessToken: string,
   nResults = 20
 ): Promise<RetrievalResponse> {
+  if (!accessToken) {
+    throw new Error('Supabase access token is required for RAG retrieval.');
+  }
+
   const requestBody: RetrievalRequest = {
     query,
     n_results: nResults,
@@ -20,6 +25,7 @@ export async function retrieveDocuments(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify(requestBody),
     });

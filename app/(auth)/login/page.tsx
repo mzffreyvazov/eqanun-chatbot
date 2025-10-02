@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useActionState, useEffect, useState } from 'react';
 import { toast } from '@/components/toast';
 
@@ -9,11 +8,8 @@ import { AuthForm } from '@/components/auth-form';
 import { SubmitButton } from '@/components/submit-button';
 
 import { login, type LoginActionState } from '../actions';
-import { useSession } from 'next-auth/react';
 
 export default function Page() {
-  const router = useRouter();
-
   const [email, setEmail] = useState('');
   const [isSuccessful, setIsSuccessful] = useState(false);
 
@@ -23,8 +19,6 @@ export default function Page() {
       status: 'idle',
     },
   );
-
-  const { update: updateSession } = useSession();
 
   useEffect(() => {
     if (state.status === 'failed') {
@@ -38,11 +32,11 @@ export default function Page() {
         description: 'Failed validating your submission!',
       });
     } else if (state.status === 'success') {
+      // NextAuth will handle the redirect server-side
+      // Just show a success indicator
       setIsSuccessful(true);
-      updateSession();
-      router.refresh();
     }
-  }, [state.status, router, updateSession]);
+  }, [state.status]);
 
   const handleSubmit = (formData: FormData) => {
     setEmail(formData.get('email') as string);

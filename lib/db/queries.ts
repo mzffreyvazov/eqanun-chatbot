@@ -39,14 +39,24 @@ import type { LanguageModelV2Usage } from '@ai-sdk/provider';
 // use the Drizzle adapter for Auth.js / NextAuth
 // https://authjs.dev/reference/adapter/drizzle
 
+// Validate environment variable before initializing client
+if (!process.env.POSTGRES_URL) {
+  throw new Error('POSTGRES_URL environment variable is not set');
+}
+
 // biome-ignore lint: Forbidden non-null assertion.
-const client = postgres(process.env.POSTGRES_URL!);
+const client = postgres(process.env.POSTGRES_URL!, {
+  connect_timeout: 10,
+  idle_timeout: 20,
+  max_lifetime: 60 * 30,
+});
 const db = drizzle(client);
 
 export async function getUser(email: string): Promise<Array<User>> {
   try {
     return await db.select().from(user).where(eq(user.email, email));
   } catch (error) {
+    console.error('Database error in getUser:', error);
     throw new ChatSDKError(
       'bad_request:database',
       'Failed to get user by email',
@@ -66,13 +76,21 @@ export async function createUser(email: string, password: string) {
 
 export async function createGuestUser() {
   const email = `guest-${Date.now()}`;
-  const password = generateHashedPassword(generateUUID());
+  const rawPassword = generateUUID();
+  const password = generateHashedPassword(rawPassword);
 
   try {
-    return await db.insert(user).values({ email, password }).returning({
+    const [createdUser] = await db.insert(user).values({ email, password }).returning({
       id: user.id,
       email: user.email,
     });
+
+    return [
+      {
+        ...createdUser,
+        rawPassword,
+      },
+    ];
   } catch (error) {
     throw new ChatSDKError(
       'bad_request:database',

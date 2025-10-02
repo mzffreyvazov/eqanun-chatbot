@@ -1,8 +1,12 @@
+import type { Request as PlaywrightRequest } from '@playwright/test';
 import { expect, test } from '../fixtures';
 import { AuthPage } from '../pages/auth';
 import { generateRandomTestUser } from '../helpers';
 import { ChatPage } from '../pages/chat';
 import { getMessageByErrorCode } from '@/lib/errors';
+import { PORT } from '@/lib/constants';
+
+const baseURL = `http://localhost:${PORT}`;
 
 test.describe
   .serial('Guest Session', () => {
@@ -15,7 +19,7 @@ test.describe
         throw new Error('Failed to load page');
       }
 
-      let request = response.request();
+  let request: PlaywrightRequest | null = response.request();
 
       const chain = [];
 
@@ -25,9 +29,9 @@ test.describe
       }
 
       expect(chain).toEqual([
-        'http://localhost:3000/',
-        'http://localhost:3000/api/auth/guest?redirectUrl=http%3A%2F%2Flocalhost%3A3000%2F',
-        'http://localhost:3000/',
+        `${baseURL}/`,
+        `${baseURL}/api/auth/guest?redirectUrl=${encodeURIComponent(`${baseURL}/`)}`,
+        `${baseURL}/`,
       ]);
     });
 
@@ -57,7 +61,7 @@ test.describe
         throw new Error('Failed to load page');
       }
 
-      let request = response.request();
+  let request: PlaywrightRequest | null = response.request();
 
       const chain = [];
 
@@ -66,7 +70,7 @@ test.describe
         request = request.redirectedFrom();
       }
 
-      expect(chain).toEqual(['http://localhost:3000/']);
+      expect(chain).toEqual([`${baseURL}/`]);
     });
 
     test('Allow navigating to /login as guest user', async ({ page }) => {

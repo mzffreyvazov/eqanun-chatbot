@@ -1,6 +1,7 @@
 'use server';
 
 import { z } from 'zod';
+import { AuthError } from 'next-auth';
 
 import { createUser, getUser } from '@/lib/db/queries';
 
@@ -25,19 +26,32 @@ export const login = async (
       password: formData.get('password'),
     });
 
+    // Call signIn - it will redirect on success or throw on error
     await signIn('credentials', {
-      email: validatedData.email,
-      password: validatedData.password,
-      redirect: false,
+      ...validatedData,
+      redirectTo: '/',
     });
 
+    // This line is never reached due to redirect
     return { status: 'success' };
-  } catch (error) {
+  } catch (error: any) {
+    // NextAuth throws AuthError on failed credentials
+    if (error instanceof AuthError) {
+      switch (error.type) {
+        case 'CredentialsSignin':
+          return { status: 'failed' };
+        default:
+          return { status: 'failed' };
+      }
+    }
+
     if (error instanceof z.ZodError) {
       return { status: 'invalid_data' };
     }
 
-    return { status: 'failed' };
+    // Re-throw to allow Next.js to handle redirects
+    // NEXT_REDIRECT is not an error, it's how Next.js implements server-side redirects
+    throw error;
   }
 };
 
@@ -66,19 +80,26 @@ export const register = async (
     if (user) {
       return { status: 'user_exists' } as RegisterActionState;
     }
+    
     await createUser(validatedData.email, validatedData.password);
+    
+    // Sign in after registration - will redirect on success
     await signIn('credentials', {
-      email: validatedData.email,
-      password: validatedData.password,
-      redirect: false,
+      ...validatedData,
+      redirectTo: '/',
     });
 
     return { status: 'success' };
-  } catch (error) {
+  } catch (error: any) {
     if (error instanceof z.ZodError) {
       return { status: 'invalid_data' };
     }
 
-    return { status: 'failed' };
+    if (error instanceof AuthError) {
+      return { status: 'failed' };
+    }
+
+    // Re-throw to allow Next.js to handle redirects
+    throw error;
   }
 };

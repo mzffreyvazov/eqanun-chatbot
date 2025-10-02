@@ -12,6 +12,9 @@ export const guestRegex = /^guest-\d+$/;
 
 export const DUMMY_PASSWORD = generateDummyPassword();
 
+// Port Configuration
+export const PORT = process.env.PORT ? Number.parseInt(process.env.PORT, 10) : 3000;
+
 // RAG Backend Configuration
 export const RAG_BACKEND_URL = 
   process.env.RAG_BACKEND_URL || 

@@ -31,6 +31,7 @@
 - Data Persistence
   - [Neon Serverless Postgres](https://vercel.com/marketplace/neon) for saving chat history and user data
   - [Vercel Blob](https://vercel.com/storage/blob) for efficient file storage
+  - [Redis](https://redis.io) for resumable streaming capabilities (optional)
 - [Auth.js](https://authjs.dev)
   - Simple and secure authentication
 
@@ -67,4 +68,63 @@ pnpm install
 pnpm dev
 ```
 
-Your app template should now be running on [localhost:3000](http://localhost:3000).
+Your app template should now be running on [localhost:3000](http://localhost:3000) (or the port specified in the `PORT` environment variable in `.env.local`).
+
+## Supabase Authentication for the RAG Service
+
+The RAG backend now validates requests with Supabase-issued JWTs. Every interactive feature that calls the retrieval service (chat, artifacts, file uploads) requires a valid Supabase session. Configure the following environment variables (see [`.env.example`](.env.example)):
+
+- `SUPABASE_URL` and `SUPABASE_ANON_KEY` – base credentials used by the app
+- `SUPABASE_SERVICE_ROLE_KEY` – required for server-side provisioning of users and password sync
+- `SUPABASE_JWT_SECRET` and `SUPABASE_JWT_AUDIENCE` – shared with the FastAPI backend for token verification
+- `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` – expose Supabase configuration to the browser when needed
+- `AUTH_PROVIDER=supabase` and `ENABLE_JWT_AUTH=true` – instruct the backend to validate Supabase tokens
+
+> 🔐 **Important:** Sign-in and guest flows will fail if Supabase credentials are missing or incorrect because the chatbot must attach a Supabase access token to every retrieval request.
+
+When users authenticate, the NextAuth credentials provider synchronizes their account with Supabase, ensuring a fresh access token is saved in the session and automatically refreshed on subsequent requests. Guest users receive temporary Supabase identities backed by the service role key so they can interact with the RAG pipeline without creating a full account.
+
+## Redis Setup (Optional)
+
+Redis enables resumable streaming capabilities, allowing chat responses to continue seamlessly even if the connection is interrupted. This is particularly useful for long-running AI responses.
+
+### Setting Up Redis
+
+**Option 1: Cloud Redis (Recommended for Production)**
+
+1. Create a Redis database on [Upstash](https://upstash.com), [Redis Cloud](https://redis.com/cloud/), or [Vercel KV](https://vercel.com/docs/storage/vercel-kv)
+2. Copy the connection URL (should start with `redis://` or `rediss://` for TLS)
+3. Add to your environment variables:
+   ```bash
+   REDIS_URL="rediss://default:password@your-host:port"
+   ```
+
+**Option 2: Local Redis (Development)**
+
+1. Install and run Redis locally:
+
+   ```bash
+   # Using Docker
+   docker run --name eqanun-redis -p 6379:6379 -d redis:7-alpine
+
+   # Or install directly: https://redis.io/docs/getting-started/
+   ```
+
+2. Add to your `.env.local`:
+   ```bash
+   REDIS_URL="redis://localhost:6379"
+   ```
+
+### Verifying Redis Integration
+
+- When Redis is configured, you'll see resumable stream activity in the console logs
+- Streams are automatically stored in Redis with a 24-hour TTL
+- To inspect Redis keys: `redis-cli keys 'resumable-stream*'`
+
+### Running Without Redis
+
+The application gracefully degrades when Redis is not available:
+
+- Streaming still works but won't be resumable
+- A warning message will appear in console logs
+- No runtime errors or functionality loss

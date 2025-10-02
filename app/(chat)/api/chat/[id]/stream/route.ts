@@ -8,16 +8,16 @@ import type { Chat } from '@/lib/db/schema';
 import { ChatSDKError } from '@/lib/errors';
 import type { ChatMessage } from '@/lib/types';
 import { createUIMessageStream, JsonToSseTransformStream } from 'ai';
-import { getStreamContext } from '../../route';
+import { getResumableStreamContext } from '@/lib/redis';
 import { differenceInSeconds } from 'date-fns';
 
 export async function GET(
-  _: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id: chatId } = await params;
 
-  const streamContext = getStreamContext();
+  const streamContext = await getResumableStreamContext();
   const resumeRequestedAt = new Date();
 
   if (!streamContext) {
@@ -66,8 +66,17 @@ export async function GET(
     execute: () => {},
   });
 
-  const stream = await streamContext.resumableStream(recentStreamId, () =>
-    emptyDataStream.pipeThrough(new JsonToSseTransformStream()),
+  // Optional: support resumeAt query parameter for partial resume
+  const url = new URL(request.url);
+  const resumeAtParam = url.searchParams.get('resumeAt');
+  const skipCharacters = resumeAtParam
+    ? Number.parseInt(resumeAtParam, 10)
+    : undefined;
+
+  const stream = await streamContext.resumableStream(
+    recentStreamId,
+    () => emptyDataStream.pipeThrough(new JsonToSseTransformStream()),
+    skipCharacters
   );
 
   /*

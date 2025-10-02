@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { chatModels } from '@/lib/ai/models';
+import { PORT } from '@/lib/constants';
 import { expect, type Page } from '@playwright/test';
 
 export class ChatPage {
@@ -58,7 +59,7 @@ export class ChatPage {
 
   async hasChatIdInUrl() {
     await expect(this.page).toHaveURL(
-      /^http:\/\/localhost:3000\/chat\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+      new RegExp(`^http://localhost:${PORT}/chat/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`),
     );
   }
 
