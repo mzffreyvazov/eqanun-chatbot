@@ -21,7 +21,7 @@ function PureSuggestedActions({
   const suggestedActions = [
     'Əmək haqqı necə hesablanır?',
     "Cinayət məcəlləsinə görə oğurluq nədir?",
-    'Meşə məcəlləsindən maraqlı maddələr hansılardır?',
+    'Mülki Məcəllənin əsas prinsipləri nələrdir?',
     'Azərbaycanın vergi sistemi necə işləyir?',
   ];
 
