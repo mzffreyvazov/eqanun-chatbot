@@ -19,5 +19,5 @@ export const PORT = process.env.PORT ? Number.parseInt(process.env.PORT, 10) : 3
 export const RAG_BACKEND_URL = 
   process.env.RAG_BACKEND_URL || 
   (isProductionEnvironment 
-    ? process.env.RAG_BACKEND_URL_PRODUCTION || 'http://localhost:8000' 
+    ? process.env.RAG_BACKEND_URL_PRODUCTION || 'http://161.35.223.180' 
     : 'http://localhost:8000');

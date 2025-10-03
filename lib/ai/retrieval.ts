@@ -20,7 +20,12 @@ export async function retrieveDocuments(
     n_results: nResults,
   };
 
+  console.log(`[RAG] Attempting to connect to: ${RAG_BACKEND_URL}/retrieve`);
+
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
     const response = await fetch(`${RAG_BACKEND_URL}/retrieve`, {
       method: 'POST',
       headers: {
@@ -28,7 +33,12 @@ export async function retrieveDocuments(
         Authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify(requestBody),
+      signal: controller.signal,
+      // Add keepalive for better connection handling
+      keepalive: true,
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       throw new Error(
@@ -51,7 +61,13 @@ export async function retrieveDocuments(
     
     return retrievalResponse;
   } catch (error) {
-    console.error('Error retrieving documents from RAG backend:', error);
+    console.error('[RAG] Error retrieving documents from RAG backend:', error);
+    console.error('[RAG] Backend URL:', RAG_BACKEND_URL);
+    console.error('[RAG] Error details:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      cause: error instanceof Error ? (error as any).cause : undefined,
+    });
     
     // Return empty response on error to gracefully degrade
     return {
