@@ -4,29 +4,62 @@
 export const documentUrlMapping: Record<string, string> = {
   // Ailə Məcəlləsi (Family Code)
   'cleaned_document-ailə.md': '46946',
-  
+
   // Cinayət Məcəlləsi (Criminal Code)
   'cleaned_document-cinayet.md': '46947',
-  
+
   // Əmək Məcəlləsi (Labor Code)
   'cleaned_document-əmək.md': '46943',
 
   // Torpaq Məcəlləsi (Land Code)
-  'cleaned_document-torpaq.md': '46942', 
+  'cleaned_document-torpaq.md': '46942',
 
-  // İnzibati Xətalar Məcəlləsi (Code of Administrative Offenses) 
-  'cleaned_document-inzibati-xetalar.md': '46960',  
+  // İnzibati Xətalar Məcəlləsi (Code of Administrative Offenses)
+  'cleaned_document-inzibati-xetalar.md': '46960',
 
   // Mülki Məcəllə (Civil Code)
-  'cleaned_document-mulki-mecelle-v2.md': '46944', 
+  'cleaned_document-mulki-mecelle-v2.md': '46944',
 
   // İnzibati Prosessual Məcəllə (Code of Administrative Procedure)
   'cleaned_document-inzibati-prosessual.md': '46956',
 
   'cleaned_document-menzil.md': '46955',
 
-  'cleaned_document-vergi.md': '46948'
+  'cleaned_document-vergi.md': '46948',
 
+  // NEW VALUES ADDED BELOW:
+  // Mülki Prosessual Məcəllə (Civil Procedure Code)
+  'cleaned_document-mulki-prosessual': '46945',
+
+  // Cinayət Prosessual Məcəlləsi (Criminal Procedure Code)
+  'cleaned_document-cinayet-prosessual': '46950',
+
+  // Miqrasiya Məcəlləsi (Migration Code)
+  'cleaned_document-miqrasiya': '46959',
+
+  // Su Məcəlləsi (Water Code)
+  'cleaned_document-su-mecellesi': '46940',
+
+  // Meşə Məcəlləsi (Forest Code)
+  'cleaned_document-mese': '46941',
+
+  // Cəzaların İcrası Məcəlləsi (Code on Execution of Punishments)
+  'cleaned_document-cəzaların_İcrası': '46951',
+
+  // Ticarət Gəmiçiliyi Məcəlləsi (Commercial Navigation Code)
+  'cleaned_document-ticaret-gemichiliyi': '46952',
+
+  // Seçki Məcəlləsi (Election Code)
+  'cleaned_document-secki': '46953',
+
+  // Gömrük Məcəlləsi (Customs Code)
+  'cleaned-document-gomruk': '46957',
+
+  // Şəhərsalma və Tikinti Məcəlləsi (Urban Planning and Construction Code)
+  'cleaned_document-seher-salmasi': '46958',
+
+  // Rəqabət Məcəlləsi (Competition Code)
+  'cleaned-document-reqabet': '56187',
 };
 
 /**
