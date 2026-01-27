@@ -4,7 +4,7 @@ export const Greeting = () => {
   return (
     <div
       key="overview"
-      className="mx-auto mt-4 flex size-full max-w-3xl flex-col justify-center px-4 md:mt-16 md:px-8"
+      className="mt-4 mr-auto flex size-full max-w-3xl flex-col justify-center px-4 text-left md:mt-16 md:px-8"
     >
       <motion.div
         initial={{ opacity: 0, y: 10 }}
