@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers';
+import { unstable_noStore as noStore } from 'next/cache';
 
 import { Chat } from '@/components/chat';
 import { DEFAULT_CHAT_MODEL } from '@/lib/ai/models';
@@ -8,6 +9,7 @@ import { auth } from '../(auth)/auth';
 import { redirect } from 'next/navigation';
 
 export default async function Page() {
+  noStore();
   const session = await auth();
 
   if (!session) {

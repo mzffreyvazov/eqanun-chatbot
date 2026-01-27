@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers';
+import { unstable_noStore as noStore } from 'next/cache';
 
 import { AppSidebar } from '@/components/app-sidebar';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
@@ -11,6 +12,7 @@ export default async function Layout({
 }: {
   children: React.ReactNode;
 }) {
+  noStore();
   const [session, cookieStore] = await Promise.all([auth(), cookies()]);
   const isCollapsed = cookieStore.get('sidebar:state')?.value !== 'true';
 
