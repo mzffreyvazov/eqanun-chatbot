@@ -171,7 +171,7 @@ export async function POST(request: Request) {
     }
 
     const stream = createUIMessageStream({
-      execute: ({ writer: dataStream }) => {
+      execute: async ({ writer: dataStream }) => {
         // Send status updates with realistic timing
         if (userQuery.trim()) {
           dataStream.write({ 
@@ -218,7 +218,7 @@ export async function POST(request: Request) {
             requestHints,
             retrievedContext 
           }),
-          messages: convertToModelMessages(uiMessages),
+          messages: await convertToModelMessages(uiMessages),
           stopWhen: stepCountIs(5),
           experimental_activeTools:
             selectedChatModel === 'chat-model-reasoning'
