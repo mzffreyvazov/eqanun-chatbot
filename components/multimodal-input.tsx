@@ -13,7 +13,6 @@ import {
   useMemo,
 } from 'react';
 import { toast } from 'sonner';
-import { useLocalStorage, useWindowSize } from 'usehooks-ts';
 
 import { ArrowUpIcon, PaperclipIcon, CpuIcon, StopIcon, ChevronDownIcon } from './icons';
 import { PreviewAttachment } from './preview-attachment';
@@ -76,7 +75,6 @@ function PureMultimodalInput({
   usage?: LanguageModelUsage;
 }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { width } = useWindowSize();
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -96,26 +94,25 @@ function PureMultimodalInput({
     }
   };
 
-  const [localStorageInput, setLocalStorageInput] = useLocalStorage(
-    'input',
-    '',
-  );
-
   useEffect(() => {
     if (textareaRef.current) {
       const domValue = textareaRef.current.value;
-      // Prefer DOM value over localStorage to handle hydration
-      const finalValue = domValue || localStorageInput || '';
+      const persistedInput =
+        typeof window !== 'undefined'
+          ? window.localStorage.getItem('input') || ''
+          : '';
+      // Prefer DOM value over persisted state to keep hydration stable.
+      const finalValue = domValue || persistedInput;
       setInput(finalValue);
       adjustHeight();
     }
-    // Only run once after hydration
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    setLocalStorageInput(input);
-  }, [input, setLocalStorageInput]);
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('input', input);
+    }
+  }, [input]);
 
   const handleInput = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(event.target.value);
@@ -144,11 +141,13 @@ function PureMultimodalInput({
     });
 
     setAttachments([]);
-    setLocalStorageInput('');
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem('input', '');
+    }
     resetHeight();
     setInput('');
 
-    if (width && width > 768) {
+    if (typeof window !== 'undefined' && window.innerWidth > 768) {
       textareaRef.current?.focus();
     }
   }, [
@@ -157,8 +156,6 @@ function PureMultimodalInput({
     attachments,
     sendMessage,
     setAttachments,
-    setLocalStorageInput,
-    width,
     chatId,
   ]);
 
@@ -432,10 +429,27 @@ function PureModelSelectorCompact({
   selectedModelId: string;
 }) {
   const [optimisticModelId, setOptimisticModelId] = useState(selectedModelId);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const selectedModel = chatModels.find(
     (model) => model.id === optimisticModelId,
   );
+
+  if (!isMounted) {
+    return (
+      <div className='flex h-8 items-center gap-2 rounded-lg bg-background px-2 text-foreground'>
+        <CpuIcon size={16} />
+        <span className='hidden font-medium text-xs sm:block'>
+          {selectedModel?.name}
+        </span>
+        <ChevronDownIcon size={16} />
+      </div>
+    );
+  }
 
   return (
     <PromptInputModelSelect

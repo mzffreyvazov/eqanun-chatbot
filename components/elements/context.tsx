@@ -1,25 +1,21 @@
 'use client';
 
+import type { LanguageModelUsage } from 'ai';
+import { breakdownTokens, estimateCost, normalizeUsage } from 'tokenlens';
+import { useEffect, useState, type ComponentProps } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { cn } from '@/lib/utils';
-import type { ComponentProps } from 'react';
-import type { LanguageModelUsage } from 'ai';
-import { breakdownTokens, estimateCost, normalizeUsage } from 'tokenlens';
-import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
+import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
 
 export type ContextProps = ComponentProps<'button'> & {
-  /** Total context window size in tokens */
   maxTokens: number;
-  /** Tokens used so far */
   usedTokens: number;
-  /** Optional full usage payload to enable breakdown view */
   usage?: LanguageModelUsage | undefined;
-  /** Optional model id (canonical or alias) to compute cost */
   modelId?: string;
 };
 
@@ -28,29 +24,30 @@ const MILLION = 1_000_000;
 const BILLION = 1_000_000_000;
 const PERCENT_MAX = 100;
 
-// Lucide CircleIcon geometry
 const ICON_VIEWBOX = 24;
 const ICON_CENTER = 12;
 const ICON_RADIUS = 10;
 const ICON_STROKE_WIDTH = 2;
 
 const formatTokens = (tokens?: number) => {
-  if (tokens === undefined) {
+  if (tokens === undefined || !Number.isFinite(tokens)) {
     return;
   }
-  if (!Number.isFinite(tokens)) {
-    return;
-  }
+
   const abs = Math.abs(tokens);
+
   if (abs < THOUSAND) {
     return `${tokens}`;
   }
+
   if (abs < MILLION) {
     return `${(tokens / THOUSAND).toFixed(1)}K`;
   }
+
   if (abs < BILLION) {
     return `${(tokens / MILLION).toFixed(1)}M`;
   }
+
   return `${(tokens / BILLION).toFixed(1)}B`;
 };
 
@@ -58,40 +55,28 @@ const formatPercent = (value: number) => {
   if (!Number.isFinite(value)) {
     return '0%';
   }
+
   const rounded = Math.round(value * 10) / 10;
+
   return Number.isInteger(rounded)
     ? `${Math.trunc(rounded)}%`
     : `${rounded.toFixed(1)}%`;
 };
 
-const formatUSD = (value?: number) => {
-  if (value === undefined || !Number.isFinite(value)) return undefined;
-  const abs = Math.abs(value);
-  // Finer precision for very small amounts common in LLM pricing
-  let decimals = 2;
-  if (abs < 0.001) decimals = 5;
-  else if (abs < 0.01) decimals = 4;
-  else if (abs < 0.1) decimals = 3;
-  else if (abs < 10) decimals = 2;
-  else decimals = 1;
-  const text = value.toFixed(decimals);
-  // Trim trailing zeros/decimal if not needed (e.g., 1.2300 -> 1.23, 2.0 -> 2)
-  const trimmed = text.replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1');
-  return `$${trimmed}`;
-};
-
 const formatUSDFixed = (value?: number, decimals = 5) => {
-  if (value === undefined || !Number.isFinite(value)) return undefined;
+  if (value === undefined || !Number.isFinite(value)) {
+    return undefined;
+  }
+
   return `$${Number(value).toFixed(decimals)}`;
 };
 
 type ContextIconProps = {
-  percent: number; // 0 - 100
+  percent: number;
 };
 
 export const ContextIcon = ({ percent }: ContextIconProps) => {
-  const radius = ICON_RADIUS;
-  const circumference = 2 * Math.PI * radius;
+  const circumference = 2 * Math.PI * ICON_RADIUS;
   const dashOffset = circumference * (1 - percent / PERCENT_MAX);
 
   return (
@@ -108,7 +93,7 @@ export const ContextIcon = ({ percent }: ContextIconProps) => {
         cy={ICON_CENTER}
         fill="none"
         opacity="0.25"
-        r={radius}
+        r={ICON_RADIUS}
         stroke="currentColor"
         strokeWidth={ICON_STROKE_WIDTH}
       />
@@ -117,7 +102,7 @@ export const ContextIcon = ({ percent }: ContextIconProps) => {
         cy={ICON_CENTER}
         fill="none"
         opacity="0.7"
-        r={radius}
+        r={ICON_RADIUS}
         stroke="currentColor"
         strokeDasharray={`${circumference} ${circumference}`}
         strokeDashoffset={dashOffset}
@@ -138,9 +123,9 @@ function TokensWithCost({
 }) {
   return (
     <span>
-      {tokens === undefined ? '—' : formatTokens(tokens)}
+      {tokens === undefined ? '--' : formatTokens(tokens)}
       {costText ? (
-        <span className="ml-2 text-muted-foreground">• {costText}</span>
+        <span className="ml-2 text-muted-foreground">- {costText}</span>
       ) : null}
     </span>
   );
@@ -156,7 +141,7 @@ function InfoRow({
   costText?: string;
 }) {
   return (
-    <div className='flex items-center justify-between text-xs'>
+    <div className="flex items-center justify-between text-xs">
       <span className="text-muted-foreground">{label}</span>
       <TokensWithCost tokens={tokens} costText={costText} />
     </div>
@@ -171,157 +156,167 @@ export const Context = ({
   modelId,
   ...props
 }: ContextProps) => {
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const safeMax = Math.max(0, Number.isFinite(maxTokens) ? maxTokens : 0);
   const safeUsed = Math.min(
     Math.max(0, Number.isFinite(usedTokens) ? usedTokens : 0),
     safeMax,
   );
 
-  // used percent and used tokens to display (demo-aware)
-  const displayUsedTokens = safeUsed;
   const usedPercent =
     safeMax > 0
-      ? Math.min(
-          PERCENT_MAX,
-          Math.max(0, (displayUsedTokens / safeMax) * PERCENT_MAX),
-        )
+      ? Math.min(PERCENT_MAX, Math.max(0, (safeUsed / safeMax) * PERCENT_MAX))
       : 0;
 
   const displayPct = formatPercent(Math.round(usedPercent * 10) / 10);
-
-  const used = formatTokens(displayUsedTokens);
+  const used = formatTokens(safeUsed);
   const total = formatTokens(safeMax);
 
-  const uNorm = normalizeUsage(usage);
-  const uBreakdown = breakdownTokens(usage);
+  const normalizedUsage = normalizeUsage(usage);
+  const usageBreakdown = breakdownTokens(usage);
 
   const hasUsage =
     !!usage &&
-    ((uNorm.input ?? 0) > 0 ||
-      (uNorm.output ?? 0) > 0 ||
-      (uBreakdown.cacheReads ?? 0) > 0 ||
-      (uBreakdown.cacheWrites ?? 0) > 0 ||
-      (uBreakdown.reasoningTokens ?? 0) > 0);
+    ((normalizedUsage.input ?? 0) > 0 ||
+      (normalizedUsage.output ?? 0) > 0 ||
+      (usageBreakdown.cacheReads ?? 0) > 0 ||
+      (usageBreakdown.cacheWrites ?? 0) > 0 ||
+      (usageBreakdown.reasoningTokens ?? 0) > 0);
 
-  // Values to render in rows (demo or real)
-  const displayInput = uNorm.input;
-  const displayOutput = uNorm.output;
+  const inputTokens = normalizedUsage.input;
+  const outputTokens = normalizedUsage.output;
+  const cacheReadTokens = usageBreakdown.cacheReads ?? 0;
+  const cacheWriteTokens = usageBreakdown.cacheWrites ?? 0;
+  const reasoningTokens = usageBreakdown.reasoningTokens ?? 0;
 
-  // Per-segment costs
   const inputCostText = modelId
     ? formatUSDFixed(
         estimateCost({
           modelId,
-          usage: { input: displayInput ?? 0, output: 0 },
+          usage: { input: inputTokens ?? 0, output: 0 },
         }).inputUSD,
       )
     : undefined;
+
   const outputCostText = modelId
     ? formatUSDFixed(
         estimateCost({
           modelId,
-          usage: { input: 0, output: displayOutput ?? 0 },
+          usage: { input: 0, output: outputTokens ?? 0 },
         }).outputUSD,
       )
     : undefined;
-  // Not supported by tokenlens pricing hints; leave undefined so no bullet is shown
-  const cacheReadsTokens = uBreakdown.cacheReads ?? 0;
-  const cacheWritesTokens = uBreakdown.cacheWrites ?? 0;
+
   const cacheReadsCostText =
-    modelId && cacheReadsTokens > 0
+    modelId && cacheReadTokens > 0
       ? formatUSDFixed(
           estimateCost({
             modelId,
-            // Cast to any to support extended pricing fields provided by tokenlens
-            usage: { cacheReads: cacheReadsTokens } as any,
+            usage: { cacheReads: cacheReadTokens } as never,
           }).totalUSD,
         )
       : undefined;
+
   const cacheWritesCostText =
-    modelId && cacheWritesTokens > 0
+    modelId && cacheWriteTokens > 0
       ? formatUSDFixed(
           estimateCost({
             modelId,
-            usage: { cacheWrites: cacheWritesTokens } as any,
+            usage: { cacheWrites: cacheWriteTokens } as never,
           }).totalUSD,
         )
       : undefined;
 
-  const reasoningTokens = uBreakdown.reasoningTokens ?? 0;
-  let reasoningCostText: string | undefined;
-  if (modelId && reasoningTokens > 0) {
-    const est = estimateCost({
-      modelId,
-      usage: { reasoningTokens },
-    }).totalUSD;
-    // TokenLens does not provide reasoning pricing for some models. Show em dash when unknown.
-    reasoningCostText =
-      est && Number.isFinite(est) && est > 0 ? formatUSDFixed(est) : '—';
-  }
+  const reasoningCostText =
+    modelId && reasoningTokens > 0
+      ? (() => {
+          const estimate = estimateCost({
+            modelId,
+            usage: { reasoningTokens },
+          }).totalUSD;
 
-  const costUSD = modelId
-    ? estimateCost({
-        modelId,
-        usage: { input: displayInput ?? 0, output: displayOutput ?? 0 },
-      }).totalUSD
+          return estimate && Number.isFinite(estimate) && estimate > 0
+            ? formatUSDFixed(estimate)
+            : '--';
+        })()
+      : undefined;
+
+  const totalCostText = modelId
+    ? formatUSDFixed(
+        estimateCost({
+          modelId,
+          usage: { input: inputTokens ?? 0, output: outputTokens ?? 0 },
+        }).totalUSD,
+      )
     : undefined;
-  const costText = formatUSDFixed(costUSD);
 
-  const fmtOrUnknown = (n?: number) =>
-    n === undefined ? '—' : formatTokens(n);
+  const trigger = (
+    <button
+      className={cn(
+        'inline-flex select-none items-center gap-1 rounded-md text-sm',
+        'cursor-pointer bg-background text-foreground',
+        className,
+      )}
+      type="button"
+      {...props}
+    >
+      <span className="hidden font-medium text-muted-foreground">
+        {displayPct}
+      </span>
+      <ContextIcon percent={usedPercent} />
+    </button>
+  );
+
+  if (!isMounted) {
+    return trigger;
+  }
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          className={cn(
-            'inline-flex select-none items-center gap-1 rounded-md text-sm',
-            'cursor-pointer bg-background text-foreground',
-            className,
-          )}
-          type="button"
-          {...props}
-        >
-          <span className="hidden font-medium text-muted-foreground">
-            {displayPct}
-          </span>
-          <ContextIcon percent={usedPercent} />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" side="top" className='w-fit p-3'>
+      <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+      <DropdownMenuContent align="end" side="top" className="w-fit p-3">
         <div className="min-w-[240px] space-y-2">
-          <div className='flex items-start justify-between text-sm'>
+          <div className="flex items-start justify-between text-sm">
             <span>{displayPct}</span>
-            <span className="text-muted-foreground">{used} / {total} tokens</span>
+            <span className="text-muted-foreground">
+              {used} / {total} tokens
+            </span>
           </div>
+
           <div className="space-y-2">
             <Progress className="h-2 bg-muted" value={usedPercent} />
           </div>
+
           <div className="mt-1 space-y-1">
-            {hasUsage && uBreakdown.cacheReads && uBreakdown.cacheReads > 0 && (
+            {hasUsage && cacheReadTokens > 0 ? (
               <InfoRow
                 label="Cache Hits"
-                tokens={uBreakdown.cacheReads}
+                tokens={cacheReadTokens}
                 costText={cacheReadsCostText}
               />
-            )}
-            {hasUsage &&
-              uBreakdown.cacheWrites &&
-              uBreakdown.cacheWrites > 0 && (
-                <InfoRow
-                  label="Cache Writes"
-                  tokens={uBreakdown.cacheWrites}
-                  costText={cacheWritesCostText}
-                />
-              )}
+            ) : null}
+
+            {hasUsage && cacheWriteTokens > 0 ? (
+              <InfoRow
+                label="Cache Writes"
+                tokens={cacheWriteTokens}
+                costText={cacheWritesCostText}
+              />
+            ) : null}
+
             <InfoRow
               label="Input"
-              tokens={displayInput}
+              tokens={inputTokens}
               costText={inputCostText}
             />
             <InfoRow
               label="Output"
-              tokens={displayOutput}
+              tokens={outputTokens}
               costText={outputCostText}
             />
             <InfoRow
@@ -329,15 +324,16 @@ export const Context = ({
               tokens={reasoningTokens > 0 ? reasoningTokens : undefined}
               costText={reasoningCostText}
             />
-            {costText && (
+
+            {totalCostText ? (
               <>
                 <Separator className="mt-1" />
-                <div className='flex items-center justify-between pt-1 text-xs'>
+                <div className="flex items-center justify-between pt-1 text-xs">
                   <span className="text-muted-foreground">Total cost</span>
-                  <span>{costText}</span>
+                  <span>{totalCostText}</span>
                 </div>
               </>
-            )}
+            ) : null}
           </div>
         </div>
       </DropdownMenuContent>
