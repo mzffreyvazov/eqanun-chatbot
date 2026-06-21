@@ -222,6 +222,22 @@ export function createArticleToDocumentMap(retrievalData: any): Map<string, stri
   return articleMap;
 }
 
+function getMarkdownLinkRanges(text: string): Array<[number, number]> {
+  const ranges: Array<[number, number]> = [];
+  const markdownLinkPattern = /\[[^\]]+\]\([^)]+\)/g;
+  let match;
+
+  while ((match = markdownLinkPattern.exec(text)) !== null) {
+    ranges.push([match.index, match.index + match[0].length]);
+  }
+
+  return ranges;
+}
+
+function isInsideRange(index: number, ranges: Array<[number, number]>): boolean {
+  return ranges.some(([start, end]) => index >= start && index < end);
+}
+
 /**
  * Processes text to convert "Maddə X" references into clickable links
  * @param text - The text content to process
@@ -254,8 +270,13 @@ export function processMaddeLinks(
   // "Maddə 57, bənd 1", "Maddə 9, bənd \"ə\"", "Maddə 162-1.1", "Maddə 1.1"
   // This pattern captures the full citation text for linking
   const maddePattern = /Maddə\s+\d+(?:-\d+)?(?:\.\d+)*(?:,\s*(?:bənd\s+(?:[\d\-\.]+|["''][^"'']*["''])|Qeyd\s+\d+))?(?:,\s*["''][^"'']*["''])*(?:,\s*["''][^"'']*["''])*/g;
+  const existingLinkRanges = getMarkdownLinkRanges(text);
   
-  const result = text.replace(maddePattern, (fullMatch) => {
+  const result = text.replace(maddePattern, (fullMatch, offset) => {
+    if (isInsideRange(offset, existingLinkRanges)) {
+      return fullMatch;
+    }
+
     // Extract just the article number from the full match for mapping
   const articleNumberMatch = fullMatch.match(/Maddə\s+(\d+(?:-\d+)?(?:\.\d+)*)/);
     if (!articleNumberMatch) return fullMatch;
